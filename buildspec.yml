@@ -1,0 +1,24 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com
+
+  build:
+    commands:
+      - echo "Building Docker image for auth service..."
+      - docker build -t $USER_SERVICE_REPO:$CODEBUILD_RESOLVED_SOURCE_VERSION -t $USER_SERVICE_REPO:latest .
+
+  post_build:
+    commands:
+      - echo "Pushing Docker image to Amazon ECR..."
+      - docker push $USER_SERVICE_REPO:$CODEBUILD_RESOLVED_SOURCE_VERSION
+      - docker push $USER_SERVICE_REPO:latest
+      - echo "Creating imagedefinitions.json..."
+      - echo "[{\"name\":\"user\",\"imageUri\":\"$USER_SERVICE_REPO:$CODEBUILD_RESOLVED_SOURCE_VERSION\"}]" > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
